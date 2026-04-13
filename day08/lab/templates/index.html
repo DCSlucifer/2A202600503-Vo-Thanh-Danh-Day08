@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Pipeline Lab — Day 08</title>
+    <meta name="description" content="Interactive UI to test the full RAG pipeline: Indexing, Retrieval, Generation, and Evaluation">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Ambient background orbs -->
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="logo-group">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline>
+                        <polyline points="7.5 19.79 7.5 14.6 3 12"></polyline>
+                        <polyline points="21 12 16.5 14.6 16.5 19.79"></polyline>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="logo-text">RAG Pipeline</h1>
+                    <span class="logo-sub">Day 08 Lab — Full Pipeline Testing</span>
+                </div>
+            </div>
+            <div class="header-status" id="header-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Loading...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <div class="tab-nav-inner">
+            <button class="tab-btn active" data-tab="chat" id="tab-chat">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Chat & Query
+            </button>
+            <button class="tab-btn" data-tab="compare" id="tab-compare">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                Compare Strategies
+            </button>
+            <button class="tab-btn" data-tab="index" id="tab-index">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                </svg>
+                Index Explorer
+            </button>
+            <button class="tab-btn" data-tab="eval" id="tab-eval">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Evaluation
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- ==================== CHAT TAB ==================== -->
+        <section class="tab-panel active" id="panel-chat">
+            <div class="chat-layout">
+                <!-- Left: Chat -->
+                <div class="chat-main">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="welcome-card">
+                            <div class="welcome-icon">🤖</div>
+                            <h2>RAG Pipeline Assistant</h2>
+                            <p>Ask questions about internal policies, SLA, access control, or IT helpdesk FAQ. The system retrieves relevant documents and generates grounded answers with citations.</p>
+                            <div class="example-queries">
+                                <span class="example-label">Try asking:</span>
+                                <button class="example-btn" onclick="fillQuery('SLA xử lý ticket P1 là bao lâu?')">SLA ticket P1?</button>
+                                <button class="example-btn" onclick="fillQuery('Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?')">Hoàn tiền?</button>
+                                <button class="example-btn" onclick="fillQuery('Ai phải phê duyệt để cấp quyền Level 3?')">Cấp quyền Level 3?</button>
+                                <button class="example-btn" onclick="fillQuery('ERR-403-AUTH là lỗi gì?')">ERR-403-AUTH?</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <div class="chat-config">
+                            <div class="config-group">
+                                <label>Retrieval</label>
+                                <select id="chat-retrieval-mode">
+                                    <option value="dense">Dense</option>
+                                    <option value="sparse">Sparse (BM25)</option>
+                                    <option value="hybrid" selected>Hybrid (RRF)</option>
+                                </select>
+                            </div>
+                            <div class="config-group">
+                                <label>Search K</label>
+                                <input type="number" id="chat-top-k-search" value="10" min="1" max="50">
+                            </div>
+                            <div class="config-group">
+                                <label>Select K</label>
+                                <input type="number" id="chat-top-k-select" value="3" min="1" max="10">
+                            </div>
+                            <div class="config-group config-toggle">
+                                <label>Rerank</label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="chat-rerank">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <form class="chat-form" id="chat-form" onsubmit="sendChat(event)">
+                            <input type="text" id="chat-input" placeholder="Nhập câu hỏi của bạn..." autocomplete="off">
+                            <button type="submit" class="send-btn" id="send-btn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <!-- Right: Retrieved chunks sidebar -->
+                <aside class="chat-sidebar" id="chat-sidebar">
+                    <div class="sidebar-header">
+                        <h3>📄 Retrieved Chunks</h3>
+                        <span class="sidebar-badge" id="chunk-count">0</span>
+                    </div>
+                    <div class="sidebar-content" id="sidebar-chunks">
+                        <div class="sidebar-empty">
+                            <p>Submit a query to see retrieved context chunks here.</p>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <!-- ==================== COMPARE TAB ==================== -->
+        <section class="tab-panel" id="panel-compare">
+            <div class="compare-layout">
+                <div class="compare-header">
+                    <h2>🔬 Strategy Comparison</h2>
+                    <p>Compare Dense, Sparse, and Hybrid retrieval strategies side-by-side.</p>
+                </div>
+                <div class="compare-input-area">
+                    <form class="compare-form" onsubmit="runComparison(event)">
+                        <input type="text" id="compare-input" placeholder="Enter query to compare across retrieval strategies..." autocomplete="off">
+                        <button type="submit" class="btn btn-primary" id="compare-btn">Compare</button>
+                    </form>
+                    <div class="compare-examples">
+                        <button class="example-btn" onclick="fillCompare('Approval Matrix để cấp quyền hệ thống là tài liệu nào?')">Alias query</button>
+                        <button class="example-btn" onclick="fillCompare('ERR-403-AUTH')">Exact code</button>
+                        <button class="example-btn" onclick="fillCompare('SLA xử lý ticket P1 là bao lâu?')">Natural query</button>
+                    </div>
+                </div>
+                <div class="compare-results" id="compare-results">
+                    <div class="compare-empty">
+                        <p>Enter a query above to compare retrieval strategies</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== INDEX TAB ==================== -->
+        <section class="tab-panel" id="panel-index">
+            <div class="index-layout">
+                <div class="index-header">
+                    <h2>🗂️ Index Explorer</h2>
+                    <div class="index-actions">
+                        <button class="btn btn-outline" onclick="loadIndexStatus()">Refresh</button>
+                        <button class="btn btn-danger" onclick="rebuildIndex()" id="rebuild-btn">Rebuild Index</button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid" id="index-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-chunks">—</div>
+                        <div class="stat-label">Total Chunks</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-docs">—</div>
+                        <div class="stat-label">Documents</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-departments">—</div>
+                        <div class="stat-label">Departments</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-sections">—</div>
+                        <div class="stat-label">Sections</div>
+                    </div>
+                </div>
+
+                <!-- Department & Section distribution -->
+                <div class="index-details-grid">
+                    <div class="detail-card">
+                        <h3>📂 Documents Indexed</h3>
+                        <div id="doc-list" class="detail-list"></div>
+                    </div>
+                    <div class="detail-card">
+                        <h3>🏢 Department Distribution</h3>
+                        <div id="dept-dist" class="detail-list"></div>
+                    </div>
+                </div>
+
+                <!-- Chunks table -->
+                <div class="chunks-section">
+                    <div class="chunks-header">
+                        <h3>📋 Chunk Preview</h3>
+                        <div class="chunks-controls">
+                            <label>Show:</label>
+                            <select id="chunk-limit" onchange="loadChunks()">
+                                <option value="10">10</option>
+                                <option value="20" selected>20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="chunks-table-wrap" id="chunks-table-wrap">
+                        <p class="text-muted">Loading chunks...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== EVAL TAB ==================== -->
+        <section class="tab-panel" id="panel-eval">
+            <div class="eval-layout">
+                <div class="eval-header">
+                    <h2>📊 Evaluation & Scorecard</h2>
+                    <p>Run LLM-as-Judge evaluation across all test questions. Compare Baseline (Dense) vs Variant (Hybrid).</p>
+                </div>
+
+                <!-- Test Questions -->
+                <div class="eval-section">
+                    <h3>📝 Test Questions</h3>
+                    <div id="test-questions-list" class="test-questions-list">
+                        <p class="text-muted">Loading test questions...</p>
+                    </div>
+                </div>
+
+                <!-- Run Evaluation -->
+                <div class="eval-actions">
+                    <button class="btn btn-primary btn-lg" onclick="runEval('baseline')" id="eval-baseline-btn">
+                        🏁 Run Baseline (Dense)
+                    </button>
+                    <button class="btn btn-accent btn-lg" onclick="runEval('variant')" id="eval-variant-btn">
+                        ⚡ Run Variant (Hybrid)
+                    </button>
+                </div>
+
+                <!-- Results -->
+                <div class="eval-results" id="eval-results">
+                    <div class="eval-empty">
+                        <p>Click a button above to run evaluation. Results will appear here.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
