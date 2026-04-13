@@ -1,14 +1,17 @@
 # Tuning Log — RAG Pipeline (Day 08 Lab)
 
-**Nhóm:** 2A202600503 — Võ Thanh Danh  
-**Ngày:** 2026-04-13  
+**Thành viên thực hiện:**
+- `2A202600503` — Võ Thanh Danh
+- `2A202600502` — Trương Hầu Minh Kiệt
+
+**Ngày:** 2026-04-13
 **A/B Rule:** Chỉ đổi MỘT biến mỗi lần.
 
 ---
 
 ## Baseline (Sprint 2) — Dense Retrieval
 
-**Ngày:** 2026-04-13  
+**Ngày:** 2026-04-13
 **Config:**
 ```
 retrieval_mode = "dense"
@@ -51,8 +54,8 @@ temperature   = 0
 
 ## Variant 1 (Sprint 3) — Hybrid: Dense + BM25 với RRF
 
-**Ngày:** 2026-04-13  
-**Biến thay đổi:** `retrieval_mode: "dense" → "hybrid"` (duy nhất 1 biến)  
+**Ngày:** 2026-04-13
+**Biến thay đổi:** `retrieval_mode: "dense" → "hybrid"` (duy nhất 1 biến)
 **Tất cả tham số khác giữ nguyên.**
 
 **Lý do chọn biến này:**

@@ -1,5 +1,8 @@
 # Architecture — RAG Pipeline (Day 08 Lab)
-**Nhóm:** 2A202600503 — Võ Thanh Danh  
+**Thành viên thực hiện:**
+- `2A202600503` — Võ Thanh Danh
+- `2A202600502` — Trương Hầu Minh Kiệt
+
 **Ngày:** 2026-04-13
 
 ## 1. Tổng quan kiến trúc
