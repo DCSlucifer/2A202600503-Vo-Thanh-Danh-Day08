@@ -2,7 +2,7 @@
 
 **Họ và tên:** Võ Thanh Danh  
 **MSSV:** 2A202600503  
-**Vai trò trong nhóm:** Sprint 1 Owner (Indexing) + Sprint 2 Owner (Baseline RAG) + Bonus UI  
+**Vai trò trong nhóm:** Sprint 1 Owner (Indexing) + Sprint 2 Owner (Baseline RAG) + Bonus UI. Ngoài phần được phân công, bản thân tự chủ động hoàn thành thêm Sprint 3 (Sparse) và Sprint 4 (Hybrid) trong repo cá nhân để tự học và nắm rõ toàn bộ pipeline  
 **Ngày nộp:** 2026-04-13  
 
 ---
@@ -63,6 +63,125 @@ Ngoài Sprint 1 và 2, tôi xây thêm Flask web UI để test toàn bộ pipeli
 | `POST /api/index/rebuild` | Rebuild index |
 | `POST /api/eval/run` | Chạy scorecard |
 | `POST /api/retrieval/compare` | So sánh 3 mode |
+
+### Hướng dẫn test UI
+
+#### Khởi động
+
+```bash
+# 1. Đảm bảo đã có .env với OPENAI_API_KEY
+# 2. Cài dependencies
+pip install flask rank-bm25 chromadb openai sentence-transformers
+
+# 3. Index tài liệu trước (nếu chưa có ChromaDB)
+python index.py
+
+# 4. Chạy Flask server
+python app.py
+# Server chạy tại http://127.0.0.1:5000
+```
+
+#### Tab 1 — Chat
+
+1. Mở `http://127.0.0.1:5000` → chọn tab **Chat**.
+2. Nhập query vào ô text, ví dụ: `"SLA cho Priority 1 là bao nhiêu?"`.
+3. Chọn **Retrieval Mode**: `dense` / `sparse` / `hybrid` (khuyến nghị `hybrid` để thấy đủ kết quả).
+4. Đặt **Top-K Search** = `10`, **Top-K Select** = `3`.
+5. Bật/tắt **Rerank** để so sánh thứ tự chunk trước và sau cross-encoder.
+6. Nhấn **Send** → quan sát:
+   - Phần **Answer**: câu trả lời được grounding từ context.
+   - Phần **Sources**: danh sách chunks `[i] source | section | score=x.xx`.
+   - Trường hợp abstain: nhập câu không có trong tài liệu, ví dụ `"Giá cổ phiếu hôm nay là bao nhiêu?"` → kỳ vọng model trả lời `"Không đủ dữ liệu..."`.
+
+#### Tab 2 — Index
+
+1. Chọn tab **Index** → trang hiển thị ngay trạng thái ChromaDB:
+   - Tổng số chunks đã index.
+   - Phân bố theo `department` (IT, HR, Finance…).
+   - Danh sách tài liệu nguồn.
+2. Nhấn **Rebuild Index** để xóa collection cũ và index lại từ đầu — không cần mở terminal.
+3. Sau khi rebuild xong, F5 lại tab Index để xác nhận số chunk không thay đổi (không bị duplicate).
+
+#### Tab 3 — Eval
+
+1. Chọn tab **Eval**.
+2. Chọn **Config**: `baseline` (dense, top-k=10) hoặc `variant` (hybrid, top-k=10).
+3. Nhấn **Run Scorecard** → UI hiển thị tiến trình chạy 10 câu hỏi.
+4. Kết quả hiển thị theo từng câu:
+   - Query, answer, và 4 score: `groundedness`, `relevance`, `completeness`, `abstain_correctness`.
+5. Cuối trang có **Average Score** theo từng metric.
+6. File kết quả tự động ghi vào `results/scorecard_baseline.md` hoặc `results/scorecard_variant.md`.
+
+#### Tab 4 — Retrieval Compare
+
+1. Chọn tab **Retrieval Compare**.
+2. Nhập một query bất kỳ, ví dụ: `"Quy trình xử lý ticket P1?"`.
+3. Nhấn **Compare** → UI gọi cả 3 mode song song (`dense` / `sparse` / `hybrid`).
+4. Ba cột kết quả hiển thị side-by-side, mỗi cột có danh sách chunk với score tương ứng.
+5. Dùng tab này để trực quan hóa:
+   - `dense` mạnh ở semantic similarity.
+   - `sparse` mạnh ở exact keyword (mã lỗi, tên chính sách).
+   - `hybrid` (RRF) cân bằng hai cái trên.
+
+#### Kiểm tra nhanh bằng `curl`
+
+```bash
+# Chat
+curl -X POST http://127.0.0.1:5000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query": "SLA P1 là bao lâu?", "mode": "hybrid", "top_k": 5}'
+
+# Index status
+curl http://127.0.0.1:5000/api/index/status
+
+# Compare retrieval
+curl -X POST http://127.0.0.1:5000/api/retrieval/compare \
+  -H "Content-Type: application/json" \
+  -d '{"query": "access control policy"}'
+```
+
+---
+
+## Phần tự học hỏi thêm (Sprint 3 & Sprint 4)
+
+> Phần này nằm ngoài phạm vi phân công, được thực hiện trong repo cá nhân để tự tìm hiểu sâu hơn toàn bộ pipeline.
+
+### Sprint 3 — Sparse & Hybrid Retrieval (`rag_answer.py`)
+
+Extend `rag_answer.py` để hỗ trợ thêm hai retrieval mode ngoài dense:
+
+- **`retrieve_sparse()`**: BM25 keyword search dùng `rank-bm25`. Build `BM25Okapi` từ toàn bộ chunks trong ChromaDB, tokenize bằng `lower().split()`. Normalize score sang `[0, 1]` bằng cách chia cho max score của batch. Mạnh ở: exact keyword (mã lỗi `ERR-403-AUTH`, ticket level `P1`, tên tài liệu).
+
+- **`retrieve_hybrid()`**: Kết hợp dense và sparse bằng **Reciprocal Rank Fusion (RRF)**. Công thức:
+  ```
+  RRF_score(doc) = dense_weight / (60 + dense_rank)
+                 + sparse_weight / (60 + sparse_rank)
+  ```
+  Dùng rank position thay vì normalize score giữa hai hệ thống — tránh vấn đề scale mismatch. Mặc định `dense_weight=0.6`, `sparse_weight=0.4`.
+
+- **`rerank()`**: Cross-encoder rerank với `cross-encoder/ms-marco-MiniLM-L-6-v2` (sentence-transformers). Có fallback về top-k nếu không có thư viện hoặc model.
+
+- **`transform_query()`**: Query expansion dùng LLM để sinh 2 phiên bản paraphrase của câu hỏi gốc. Ý tưởng để tăng recall, chưa tích hợp vào pipeline chính.
+
+- **`compare_retrieval_strategies()`**: So sánh dense vs hybrid với cùng query để justify lý do chọn hybrid làm variant config trong eval.
+
+### Sprint 4 — Evaluation & LLM-as-Judge (`eval.py`)
+
+Implement toàn bộ evaluation pipeline:
+
+- **LLM-as-Judge**: Dùng `gpt-4o-mini` làm judge chấm mỗi câu trả lời theo 4 metrics, trả về score 0–2 cho từng metric:
+  | Metric | Ý nghĩa |
+  |---|---|
+  | `groundedness` | Câu trả lời có bám vào context không (không hallucinate) |
+  | `relevance` | Có trả lời đúng câu hỏi không |
+  | `completeness` | Có đủ thông tin không |
+  | `abstain_correctness` | Nếu phải abstain thì có abstain không |
+
+- **`run_scorecard()`**: Chạy toàn bộ 10 test questions qua pipeline với một config (baseline hoặc variant), gọi judge cho từng câu, tính average score mỗi metric, ghi ra `.md` và `.json`.
+
+- **A/B Comparison**: `BASELINE_CONFIG` (dense, top-k=10) vs `VARIANT_CONFIG` (hybrid, top-k=10). Biến thay đổi duy nhất là `retrieval_mode` để kết quả so sánh fair. Kết quả ghi ra `results/ab_comparison.csv`.
+
+- **Data**: 10 test questions trong `data/test_questions.json` bao gồm câu hỏi về SLA, policy hoàn tiền, access control, và intentionally unanswerable questions để test abstain behavior.
 
 ---
 
